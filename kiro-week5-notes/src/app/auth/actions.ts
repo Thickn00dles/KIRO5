@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthState = { error: string | null };
@@ -47,7 +48,20 @@ export async function signup(
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+
+  // Build an absolute origin so confirmation links come back to our callback.
+  const headerList = await headers();
+  const origin =
+    headerList.get("origin") ??
+    (headerList.get("host") ? `https://${headerList.get("host")}` : "");
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: origin ? `${origin}/auth/callback` : undefined,
+    },
+  });
 
   if (error) {
     return { error: error.message };

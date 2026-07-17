@@ -34,21 +34,25 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
+  const path = request.nextUrl.pathname;
+  const isLoginOrSignup = path.startsWith("/login") || path.startsWith("/signup");
+  // /auth/* routes (e.g. the email-confirmation callback) must run even
+  // when there is no session yet, so treat them as public.
+  const isPublic = isLoginOrSignup || path.startsWith("/auth");
 
-  // Not logged in and not on an auth page -> send to login.
-  if (!user && !isAuthRoute) {
+  // Not logged in and on a protected page -> send to login.
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
-  // Logged in but on an auth page -> send to the notes home.
-  if (user && isAuthRoute) {
+  // Logged in but on the login/signup page -> send to the notes home.
+  if (user && isLoginOrSignup) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
