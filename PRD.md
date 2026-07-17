@@ -1,77 +1,63 @@
-# PRD — kiro-week5-notes
+# PRD — Reverse Snake (full-stack game)
 
 ## 1. Overview
-A minimal full-stack **personal notes app**. Each user creates an account, logs in,
-and manages a private list of notes. Notes are strictly per-user: no one can see
-another user's data. Built to demonstrate authentication + a database with proper
-security, kept intentionally small so it can be finished in one week.
+A single-game full-stack app. Users sign in and are taken **straight to the Reverse Snake
+game**, which has a global leaderboard. Auth and data (scores, display names) are handled by
+Supabase. The login gate stays in front of the game.
 
 ## 2. Goals
-- Demonstrate real authentication (sign up, log in, log out).
-- Demonstrate persistent, per-user data (notes stored in a database).
-- Enforce data isolation at the database level (Row-Level Security), not just in the UI.
+- One shared login (Supabase Auth) in front of the game.
+- After login, land directly on the game — no menus or other pages.
+- Persist scores per user and show a shared leaderboard of unique players by best score.
+- An editable display name used on the leaderboard.
 
-## 3. Non-Goals (explicitly out of scope for this week)
-- Sharing notes between users or collaboration.
-- Rich text / markdown editor, attachments, images.
-- Tags, folders, search, or sorting beyond newest-first.
-- Password reset emails, OAuth/social login, profile pages.
-- Mobile app. (Responsive web is enough.)
+## 3. Non-Goals
+- Multiple games / a game hub.
+- Notes or any non-game features.
+- Real-time multiplayer.
 
-## 4. Target User
-A single individual who wants a private place to jot and manage short notes.
+## 4. Gameplay — Reverse Snake 🧲
+Your tail chases your head. Steer the head with arrow keys/WASD and flee; grab orbs to grow.
+A longer tail is more likely to catch you. Hitting a wall or your own tail ends the run.
+- 21×21 grid on a canvas; one orb at a time; speed ramps up with score.
+- Space: pause/resume. Enter: start/restart.
+- `score` = orbs eaten (higher is better).
 
-## 5. Tech Stack
-- **Frontend + Backend:** Next.js (App Router, TypeScript)
-- **Styling:** Tailwind CSS
-- **Auth + Database:** Supabase (Postgres + Supabase Auth)
-- **Hosting:** Vercel
-- **Data access:** `@supabase/supabase-js` with `@supabase/ssr` for session handling
+## 5. Flow
+1. Visit app → redirected to `/login` if signed out.
+2. Sign in → land directly on the game (`/`).
+3. Play → on game over the score is submitted; the leaderboard updates.
+4. Optional: change your display name (applies across the whole leaderboard).
 
-## 6. Core Features (MVP)
-### 6.1 Authentication
-- Sign up with email + password.
-- Log in with email + password.
-- Log out.
-- Unauthenticated users are redirected to the login page when visiting protected routes.
+## 6. Data Model
+### Table `scores`
+| Column       | Type        | Notes                                   |
+|--------------|-------------|-----------------------------------------|
+| `id`         | uuid        | PK                                      |
+| `user_id`    | uuid        | FK auth.users, default `auth.uid()`     |
+| `player_name`| text        | Snapshot of display name at submit time |
+| `score`      | integer     | >= 0                                    |
+| `created_at` | timestamptz | default now()                           |
 
-### 6.2 Notes CRUD
-- **Create** a note (title + body).
-- **Read** a list of the current user's notes (newest first).
-- **Update** an existing note.
-- **Delete** a note.
+### Table `profiles`
+| Column        | Type | Notes                           |
+|---------------|------|---------------------------------|
+| `user_id`     | uuid | PK, FK auth.users               |
+| `display_name`| text | 2–24 chars, shown on the board  |
 
-### 6.3 Security
-- Each note row stores the owning `user_id`.
-- Row-Level Security (RLS) is enabled so users can only select/insert/update/delete
-  their own rows, enforced by Postgres regardless of client code.
+### Row-Level Security
+- `scores`: authenticated users read all (leaderboard); users insert only their own rows.
+- `profiles`: authenticated users read all names; users insert/update only their own.
 
-## 7. Data Model
-### Table: `notes`
-| Column      | Type        | Notes                                        |
-|-------------|-------------|----------------------------------------------|
-| `id`        | uuid        | Primary key, default `gen_random_uuid()`     |
-| `user_id`   | uuid        | FK to `auth.users(id)`, default `auth.uid()` |
-| `title`     | text        | Required                                     |
-| `body`      | text        | Optional                                     |
-| `created_at`| timestamptz | Default `now()`                              |
-| `updated_at`| timestamptz | Default `now()`                              |
+## 7. Leaderboard
+- Top 10 **unique** players by their **best** score.
+- Names come from `profiles`, so a rename updates the whole board.
+- The current player's row is highlighted; personal best shown in the HUD.
 
-## 8. Pages / Routes
-- `/login` — login form (+ link to sign up)
-- `/signup` — sign up form
-- `/` (or `/notes`) — protected: list + create + edit + delete notes
-- Server-side redirect to `/login` if no session.
-
-## 9. Environment Variables
-- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL (public)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key (public)
-- (Secrets like the `service_role` key are NOT used in the client and NOT committed.)
-
-## 10. Acceptance Criteria
-- A new user can sign up, then log in.
-- A logged-in user can create, edit, and delete notes and see them persist across reloads.
-- Logging in as a different user shows a different, empty notes list.
-- Attempting to query another user's notes returns nothing (verified via RLS).
-- Visiting the notes page while logged out redirects to `/login`.
-- App builds cleanly and deploys to Vercel.
+## 8. Acceptance Criteria
+- Signed-out users are redirected to `/login`.
+- After sign-in the user lands directly on the game (no intermediate page).
+- Movement, growth, collision, pause, and game-over all work.
+- On game over the score is saved and the leaderboard updates without a full reload.
+- Each player appears once on the board (their best), by name (no emails exposed).
+- Changing the display name updates it across the leaderboard.
