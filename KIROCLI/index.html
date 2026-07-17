@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productivity Hub — To-Do List & Flappy Bird</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ===== HEADER ===== -->
+    <header class="header">
+        <div class="header__top">
+            <h1 class="header__title">Productivity Hub</h1>
+            <time id="datetime" class="header__datetime"></time>
+        </div>
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stats-bar__item">
+                <span class="stats-bar__icon">🎮</span>
+                <span class="stats-bar__label">Tokens</span>
+                <span id="stat-tokens" class="stats-bar__value">0</span>
+            </div>
+            <div class="stats-bar__item">
+                <span class="stats-bar__icon">✅</span>
+                <span class="stats-bar__label">Completed</span>
+                <span id="stat-completed" class="stats-bar__value">0</span>
+            </div>
+            <div class="stats-bar__item">
+                <span class="stats-bar__icon">🏆</span>
+                <span class="stats-bar__label">High Score</span>
+                <span id="stat-highscore" class="stats-bar__value">0</span>
+            </div>
+            <div class="stats-bar__item">
+                <span class="stats-bar__icon">⭐</span>
+                <span class="stats-bar__label">Score</span>
+                <span id="stat-score" class="stats-bar__value">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main">
+        <!-- ===== TO-DO PANEL ===== -->
+        <section class="panel todo-panel" aria-label="To-Do List">
+            <div class="todo-header">
+                <h2 class="panel__title">My Tasks</h2>
+                <span id="todo-view-count" class="todo-view-count"></span>
+            </div>
+
+            <!-- View Tabs: Active / Archived / Trash -->
+            <nav class="todo-tabs" role="tablist" aria-label="Task views">
+                <button class="todo-tabs__btn active" data-view="active" role="tab" aria-selected="true">
+                    <span class="todo-tabs__icon">📋</span> Active
+                </button>
+                <button class="todo-tabs__btn" data-view="archived" role="tab" aria-selected="false">
+                    <span class="todo-tabs__icon">📦</span> Archived
+                </button>
+                <button class="todo-tabs__btn" data-view="trash" role="tab" aria-selected="false">
+                    <span class="todo-tabs__icon">🗑️</span> Trash
+                </button>
+            </nav>
+
+            <!-- Add Task Form (only visible on Active view) -->
+            <form id="todo-form" class="todo-form" autocomplete="off">
+                <div class="todo-form__row">
+                    <input 
+                        type="text" 
+                        id="todo-input" 
+                        class="todo-form__input" 
+                        placeholder="What needs to be done?" 
+                        required
+                        aria-label="Task description"
+                    >
+                    <button type="submit" class="todo-form__btn" aria-label="Add task">
+                        <span>+</span> Add Task
+                    </button>
+                </div>
+                <div class="todo-form__options">
+                    <select id="todo-priority" class="todo-form__priority" aria-label="Task priority">
+                        <option value="low">🟢 Low</option>
+                        <option value="medium" selected>🟡 Medium</option>
+                        <option value="high">🔴 High</option>
+                    </select>
+                    <input 
+                        type="date" 
+                        id="todo-due-date" 
+                        class="todo-form__due-date" 
+                        aria-label="Due date"
+                    >
+                </div>
+            </form>
+
+            <!-- Filter Buttons (only visible on Active view) -->
+            <div id="todo-filters" class="todo-filters" role="group" aria-label="Filter tasks">
+                <button class="todo-filters__btn active" data-filter="all">All</button>
+                <button class="todo-filters__btn" data-filter="pending">Pending</button>
+                <button class="todo-filters__btn" data-filter="completed">Completed</button>
+            </div>
+
+            <!-- Bulk Actions (visible on Archived/Trash) -->
+            <div id="todo-bulk-actions" class="todo-bulk-actions hidden">
+                <button id="bulk-restore-btn" class="todo-bulk__btn todo-bulk__btn--restore" title="Restore all">
+                    ↩️ Restore All
+                </button>
+                <button id="bulk-delete-btn" class="todo-bulk__btn todo-bulk__btn--danger" title="Permanently delete all">
+                    ⚠️ Delete All Permanently
+                </button>
+            </div>
+
+            <!-- Task List -->
+            <ul id="todo-list" class="todo-list" aria-label="Task list"></ul>
+
+            <!-- Empty State -->
+            <div id="todo-empty" class="todo-empty hidden">
+                <span class="todo-empty__icon">📝</span>
+                <p class="todo-empty__text">No tasks here yet</p>
+            </div>
+
+            <!-- Task Stats -->
+            <div class="todo-stats">
+                <span id="todo-stats-total">0 total</span>
+                <span class="todo-stats__divider">|</span>
+                <span id="todo-stats-completed">0 done</span>
+                <span class="todo-stats__divider">|</span>
+                <span id="todo-stats-remaining">0 pending</span>
+            </div>
+        </section>
+
+        <!-- ===== GAME PANEL ===== -->
+        <section class="panel game-panel" aria-label="Flappy Bird Mini-Game">
+            <h2 class="panel__title">Flappy Bird 🐦</h2>
+
+            <!-- Game Canvas Container -->
+            <div id="game-container" class="game-container">
+                <canvas id="game-canvas" class="game-canvas"></canvas>
+                
+                <!-- Token Requirement Notice -->
+                <div id="game-token-notice" class="game-token-notice">
+                    <p>🎮 Complete tasks to earn game tokens!</p>
+                    <p class="game-token-notice__sub">Every 3 tasks completed = 1 token</p>
+                </div>
+            </div>
+
+            <!-- Game Controls -->
+            <div class="game-controls">
+                <button id="game-play-btn" class="game-controls__btn game-controls__btn--play" disabled>
+                    ▶ Play (1 Token)
+                </button>
+                <button id="game-pause-btn" class="game-controls__btn game-controls__btn--pause" disabled>
+                    ⏸ Pause
+                </button>
+                <button id="game-restart-btn" class="game-controls__btn game-controls__btn--restart" disabled>
+                    🔄 Restart
+                </button>
+            </div>
+
+            <!-- Game Instructions -->
+            <p class="game-instructions">
+                Press <kbd>Space</kbd>, <kbd>↑</kbd>, or tap to jump. <kbd>Esc</kbd> to pause.
+            </p>
+        </section>
+
+        <!-- ===== COMPETITION PANEL ===== -->
+        <section class="panel competition-panel" aria-label="Todo Competitions">
+        <div class="competition-header">
+            <h2 class="panel__title">⚔️ Competitions</h2>
+            <span class="competition-subtitle">Challenge friends to complete more tasks!</span>
+        </div>
+
+        <!-- Competition Tabs -->
+        <nav class="comp-tabs" role="tablist" aria-label="Competition views">
+            <button class="comp-tabs__btn active" data-comp-view="challenges" role="tab" aria-selected="true">
+                My Challenges
+            </button>
+            <button class="comp-tabs__btn" data-comp-view="create" role="tab" aria-selected="false">
+                + New Challenge
+            </button>
+            <button class="comp-tabs__btn" data-comp-view="leaderboard" role="tab" aria-selected="false">
+                🏆 Leaderboard
+            </button>
+        </nav>
+
+        <!-- Create Challenge View -->
+        <div id="comp-create-view" class="comp-view hidden">
+            <form id="comp-create-form" class="comp-form" autocomplete="off">
+                <div class="comp-form__group">
+                    <label class="comp-form__label" for="comp-your-name">Your Name</label>
+                    <input 
+                        type="text" 
+                        id="comp-your-name" 
+                        class="comp-form__input" 
+                        placeholder="Enter your display name"
+                        required
+                        maxlength="30"
+                    >
+                </div>
+                <div class="comp-form__group">
+                    <label class="comp-form__label" for="comp-challenge-name">Challenge Name</label>
+                    <input 
+                        type="text" 
+                        id="comp-challenge-name" 
+                        class="comp-form__input" 
+                        placeholder="e.g., Weekend Productivity Sprint"
+                        required
+                        maxlength="50"
+                    >
+                </div>
+                <div class="comp-form__row">
+                    <div class="comp-form__group">
+                        <label class="comp-form__label" for="comp-duration">Duration</label>
+                        <select id="comp-duration" class="comp-form__select">
+                            <option value="1">1 Day</option>
+                            <option value="3">3 Days</option>
+                            <option value="7" selected>7 Days</option>
+                            <option value="14">14 Days</option>
+                            <option value="30">30 Days</option>
+                        </select>
+                    </div>
+                    <div class="comp-form__group">
+                        <label class="comp-form__label" for="comp-goal">Task Goal (optional)</label>
+                        <input 
+                            type="number" 
+                            id="comp-goal" 
+                            class="comp-form__input" 
+                            placeholder="e.g., 20"
+                            min="1"
+                            max="999"
+                        >
+                    </div>
+                </div>
+                <button type="submit" class="comp-form__btn">🚀 Create Challenge & Get Invite Link</button>
+            </form>
+        </div>
+
+        <!-- My Challenges View -->
+        <div id="comp-challenges-view" class="comp-view">
+            <div id="comp-challenges-list" class="comp-challenges-list"></div>
+            <div id="comp-challenges-empty" class="comp-empty hidden">
+                <span class="comp-empty__icon">⚔️</span>
+                <p class="comp-empty__text">No active challenges</p>
+                <p class="comp-empty__sub">Create one or join via an invite link!</p>
+            </div>
+        </div>
+
+        <!-- Leaderboard View -->
+        <div id="comp-leaderboard-view" class="comp-view hidden">
+            <div id="comp-leaderboard-select" class="comp-leaderboard-select">
+                <label class="comp-form__label" for="comp-leaderboard-challenge">Select Challenge</label>
+                <select id="comp-leaderboard-challenge" class="comp-form__select">
+                    <option value="">— Choose a challenge —</option>
+                </select>
+            </div>
+            <div id="comp-leaderboard" class="comp-leaderboard"></div>
+            <div id="comp-leaderboard-empty" class="comp-empty hidden">
+                <span class="comp-empty__icon">🏆</span>
+                <p class="comp-empty__text">Select a challenge to view the leaderboard</p>
+            </div>
+        </div>
+
+        <!-- Invite Link Modal/Display -->
+        <div id="comp-invite-display" class="comp-invite-display hidden">
+            <div class="comp-invite-display__header">
+                <span>🔗 Invite Link Generated!</span>
+                <button id="comp-invite-close" class="comp-invite-display__close" aria-label="Close">✕</button>
+            </div>
+            <p class="comp-invite-display__desc">Share this link with friends to invite them:</p>
+            <div class="comp-invite-display__link-box">
+                <input type="text" id="comp-invite-link" class="comp-invite-display__input" readonly>
+                <button id="comp-invite-copy" class="comp-invite-display__copy">📋 Copy</button>
+            </div>
+            <p id="comp-invite-copied" class="comp-invite-display__copied hidden">✓ Copied to clipboard!</p>
+        </div>
+
+        <!-- Share Progress Display -->
+        <div id="comp-share-display" class="comp-share-display hidden">
+            <div class="comp-invite-display__header">
+                <span>📊 Share Your Progress</span>
+                <button id="comp-share-close" class="comp-invite-display__close" aria-label="Close">✕</button>
+            </div>
+            <p class="comp-invite-display__desc">Send this link to update your progress on others' leaderboards:</p>
+            <div class="comp-invite-display__link-box">
+                <input type="text" id="comp-share-link" class="comp-invite-display__input" readonly>
+                <button id="comp-share-copy" class="comp-invite-display__copy">📋 Copy</button>
+            </div>
+            <p id="comp-share-copied" class="comp-invite-display__copied hidden">✓ Copied to clipboard!</p>
+        </div>
+    </section>
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <p>Productivity Hub — Stay focused, earn rewards 🚀</p>
+    </footer>
+
+    <!-- Scripts loaded in dependency order -->
+    <script src="tokens.js"></script>
+    <script src="todo.js"></script>
+    <script src="competition.js"></script>
+    <script src="game.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
