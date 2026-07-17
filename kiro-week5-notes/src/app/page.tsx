@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/auth/actions";
@@ -36,14 +37,22 @@ export default async function HomePage() {
               {user.email}
             </p>
           </div>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/game"
+              className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-400"
             >
-              Sign out
-            </button>
-          </form>
+              🧲 Play
+            </Link>
+            <form action={logout}>
+              <button
+                type="submit"
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 
