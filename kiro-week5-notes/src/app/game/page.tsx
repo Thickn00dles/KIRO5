@@ -5,6 +5,7 @@ import { logout } from "@/app/auth/actions";
 import { submitScore } from "@/app/game/actions";
 import ReverseSnake from "@/components/ReverseSnake";
 import Leaderboard from "@/components/Leaderboard";
+import NameEditor from "@/components/NameEditor";
 
 export default async function GamePage() {
   const supabase = await createClient();
@@ -17,29 +18,58 @@ export default async function GamePage() {
     redirect("/login");
   }
 
-  // Top 10 scores for the shared leaderboard.
-  const { data: topScores } = await supabase
-    .from("scores")
-    .select("id, user_id, player_name, score")
-    .order("score", { ascending: false })
-    .limit(10);
-
-  // The signed-in player's personal best.
-  const { data: myScores } = await supabase
-    .from("scores")
-    .select("score")
+  // Ensure this player has a profile; default the name to the email local-part.
+  const { data: myProfile } = await supabase
+    .from("profiles")
+    .select("display_name")
     .eq("user_id", user.id)
+    .maybeSingle();
+
+  let myName = myProfile?.display_name;
+  if (!myName) {
+    myName = (user.email?.split("@")[0] ?? "player").slice(0, 24);
+    await supabase
+      .from("profiles")
+      .insert({ user_id: user.id, display_name: myName });
+  }
+
+  // Pull scores (highest first) and keep only each player's best -> unique names.
+  const { data: allScores } = await supabase
+    .from("scores")
+    .select("user_id, score")
     .order("score", { ascending: false })
-    .limit(1);
+    .limit(500);
 
-  const personalBest = myScores?.[0]?.score ?? 0;
+  const bestByUser = new Map<string, number>();
+  for (const s of allScores ?? []) {
+    const uid = s.user_id as string;
+    if (!bestByUser.has(uid)) bestByUser.set(uid, s.score as number);
+  }
 
-  const rows = (topScores ?? []).map((r) => ({
-    id: r.id as string,
-    player_name: r.player_name as string,
-    score: r.score as number,
-    isMe: r.user_id === user.id,
+  // Map insertion order already follows descending best score.
+  const topUsers = [...bestByUser.entries()].slice(0, 10);
+  const topUserIds = topUsers.map(([uid]) => uid);
+
+  // Fetch current display names for the users on the board.
+  const { data: profiles } = topUserIds.length
+    ? await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", topUserIds)
+    : { data: [] as { user_id: string; display_name: string }[] };
+
+  const nameByUser = new Map(
+    (profiles ?? []).map((p) => [p.user_id as string, p.display_name as string])
+  );
+
+  const rows = topUsers.map(([uid, score]) => ({
+    id: uid,
+    player_name: nameByUser.get(uid) ?? "player",
+    score,
+    isMe: uid === user.id,
   }));
+
+  const personalBest = bestByUser.get(user.id) ?? 0;
 
   return (
     <div className="min-h-dvh bg-slate-950">
@@ -71,7 +101,8 @@ export default async function GamePage() {
         <section className="flex justify-center">
           <ReverseSnake submitScore={submitScore} personalBest={personalBest} />
         </section>
-        <aside className="lg:pt-2">
+        <aside className="space-y-4 lg:pt-2">
+          <NameEditor currentName={myName} />
           <Leaderboard rows={rows} />
         </aside>
       </main>
